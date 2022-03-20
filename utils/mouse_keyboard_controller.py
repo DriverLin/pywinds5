@@ -16,6 +16,14 @@ def key_press(num):
 def key_relese(num):
     win32api.keybd_event(num, _MapVirtualKey(num, 0), win32con.KEYEVENTF_KEYUP, 0)
 
+def key_event(num,down):
+    if down:
+        key_press(num)
+    else:
+        key_relese(num)
+
+
+
 def mouse_press(btn):
     if btn == MOUSE_BTN_LEFT:
         win32api.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
