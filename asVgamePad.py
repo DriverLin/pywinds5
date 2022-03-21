@@ -1,11 +1,71 @@
 import threading
+from random import randint
+from time import sleep
+from turtle import color
 
+import matplotlib.pyplot as plt
+import numpy as np
 import vgamepad as vg
 from vgamepad import XUSB_BUTTON
 
 from utils.ds5_events import *
 from utils.mouse_keyboard_controller import *
 from utils.pywinds5 import pywinds5
+
+
+def moving_average(interval, windowsize):
+    window = np.ones(int(windowsize)) / float(windowsize)
+    re = np.convolve(interval, window, 'same')
+    return re
+
+
+class Drawer:
+    def __init__(self, x_range: int) -> None:
+        self.x_range = x_range
+        plt.ion()
+        plt.figure(3, figsize=(8, 4))
+        # plt.axis(xmin=0, xmax=x_range , ymin=  -  , ymax=255)
+        self.ptr = 0
+        self.x = [x for x in range(x_range)]
+        self.r = [x for x in range(x_range)]
+        self.g = [x for x in range(x_range)]
+        self.b = [x for x in range(x_range)]
+        self.min = 65535
+        self.max = -65535
+
+    def update(self, x, y, z):
+        self.r[self.ptr] = x
+        self.g[self.ptr] = y
+        self.b[self.ptr] = z
+        self.ptr = (self.ptr + 1) % len(self.x)
+        self.min = min([self.min, x, y, z])
+        self.max = max([self.max, x, y, z])
+
+    def runnforever(self):
+        while True:
+            plt.clf()
+            plt.xticks([])
+            plt.yticks([])
+
+            r =  self.r[self.ptr:] + self.r[:self.ptr]
+            g = self.g[self.ptr:] + self.g[:self.ptr]
+            b = self.b[self.ptr:] + self.b[:self.ptr]
+
+            
+            plt.plot(self.x, r, color="#FF4081",linestyle='-')
+            plt.plot(self.x, g, color="#0288D1",linestyle='-')
+            plt.plot(self.x, b, color="#FFEB3B",linestyle='-')
+
+
+            plt.plot(self.x, moving_average(r, 20), color='#C2185B', linestyle='-') 
+            plt.plot(self.x, moving_average(g, 20), color='#303F9F', linestyle='-')
+            plt.plot(self.x, moving_average(b, 20), color='#FF5722', linestyle='-')
+
+            plt.plot(self.x, [self.min for x in range(self.x_range)], 'k-')
+            plt.plot(self.x, [self.max for x in range(self.x_range)], 'k-')
+
+            plt.pause(1 / 60)
+
 
 X360_BTN_MAP = {
     BTN_CROSS: XUSB_BUTTON.XUSB_GAMEPAD_A,
@@ -43,6 +103,8 @@ class vgamepad_controller:
             onTouchPad_1=self.onTouchPad_1,
         )
 
+        self.drawer = Drawer(x_range=250)
+
         self.vx360 = vg.VX360Gamepad()
         self.vx360.register_notification(callback_function=self.callBack)
 
@@ -53,6 +115,9 @@ class vgamepad_controller:
 
         self.touchPoint_1_down = False
         self.touchPoint_1_last = (-1, -1)
+
+    def drawThree(self, x, y, z):
+        self.drawer.update(x, y, z)
 
     def onBTN(self, btn, down):
         if btn in X360_BTN_MAP:
@@ -100,11 +165,14 @@ class vgamepad_controller:
         self.setRS()
 
     def onGyro(self, x, y, z):
-        # self.ds5.stateController.setGyroscope(x, y, z)
         # print(f"Gyroscope: {x}, {y}, {z}")
         pass
 
     def onAcc(self, x, y, z):
+        # print(f"Accelerometer: {x}, {y}, {z}")
+
+        self.drawThree(x, y, z)
+
         self.rs_add_y = int(x / 16)  # c_short
         self.rs_add_x = int(- y / 4)
         self.setRS()
@@ -136,4 +204,6 @@ class vgamepad_controller:
         return self.ds5.run()
 
 
-vgamepad_controller().run().join()
+vc = vgamepad_controller()
+vc.run()
+vc.drawer.runnforever()
