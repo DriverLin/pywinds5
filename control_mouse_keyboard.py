@@ -12,7 +12,13 @@ class hid_controller:
             onBTN=self.onBTN,
             onRT=self.onRT,
             onLT=self.onLT,
+            onTouchPad_1=self.onTouchPad_1,
             )
+
+        self.touchPoint_1_down = False
+        self.touchPoint_1_last = (-1, -1)
+
+
         threading.Thread(target=self.accView).start()
         threading.Thread(target=self.rsView).start()
         threading.Thread(target=self.lsWheel).start()
@@ -49,10 +55,14 @@ class hid_controller:
     
     
     def onRT(self,value):
-        self.ds5.stateController.setLightBar_RGB(r = value/32)
+        self.ds5.stateController.setLightBar_RGB(r = value * 200 / 255 + 55 )
+        # self.ds5.stateController.setRightRumble(value / 32)
 
     def onLT(self,value):
-        self.ds5.stateController.setLightBar_RGB(g = value/32)
+        self.ds5.stateController.setLightBar_RGB(g = value * 200 / 255 + 55)
+        # self.ds5.stateController.setLeftRumble(value / 32)
+        
+
 
     def onBTN(self,code,down):
         if code == BTN_R2:
@@ -68,7 +78,6 @@ class hid_controller:
                 key_relese(18)
         elif code == BTN_CIRCLE:
             if self.ds5.getBTN(BTN_L1):
-
                 key_event(39, down)
         elif code == BTN_SQUARE:
             if self.ds5.getBTN(BTN_L1):
@@ -81,7 +90,24 @@ class hid_controller:
             key_event(38, down)
         elif code == BTN_DPAD_DOWN:
             key_event(40, down)
-            self.ds5.stateController.setLightBar("#d9005188")
+            # self.ds5.stateController.setLightBar("#d9005188")
+        elif code == TOUCH_POINT_1:
+            self.touchPoint_1_down = down
+            if down == False:
+                self.touchPoint_1_last = (-1, -1)
+
+    def onTouchPad_1(self, x, y):
+        if self.touchPoint_1_down:
+            if self.touchPoint_1_last == (-1, -1):
+                self.touchPoint_1_last = (x, y)
+            else:
+                offset_x, offset_y = x - \
+                    self.touchPoint_1_last[0], y-self.touchPoint_1_last[1]
+                self.touchPoint_1_last = (x, y)
+                # mouse_move(int(offset_x/4), int(offset_y / 4))
+                mouse_wheel(int(offset_y))
+        else:
+            pass
 
     def run(self):
         return self.ds5.run()

@@ -31,16 +31,53 @@ class stateController:
 
     def setLightBar_RGB(self, r=None, g=None, b=None):
         if r != None:
+            assert 0 <= r <= 255
             self.ds5w.outState.lightbar.r = int(r)
         if g != None:
+            assert 0 <= g <= 256
             self.ds5w.outState.lightbar.g = int(g)
         if b != None:
+            assert 0 <= b <= 256
             self.ds5w.outState.lightbar.b = int(b)
+        # print("self.ds5w.outState.lightbar",self.ds5w.outState.lightbar.r,self.ds5w.outState.lightbar.g,self.ds5w.outState.lightbar.b)
+        self.ds5w.outState.disableLeds = False
 
 
+    def setPlayerLEDs(self, bitmask=None, palyerLedFade=None, brightness=None):
+        if bitmask != None:
+            assert bitmask in [DS5W_OSTATE_PLAYER_LED_LEFT, DS5W_OSTATE_PLAYER_LED_MIDDLE_LEFT,
+                               DS5W_OSTATE_PLAYER_LED_MIDDLE, DS5W_OSTATE_PLAYER_LED_MIDDLE_RIGHT, DS5W_OSTATE_PLAYER_LED_RIGHT]
+            self.ds5w.outState.playerLeds.bitmask = bitmask
+        if palyerLedFade != None:
+            assert type(palyerLedFade) == bool
+            self.ds5w.outState.playerLeds.playerLedFade = palyerLedFade
+        if brightness != None:
+            assert brightness in [LedBrightness.HIGH, LedBrightness.MEDIUM, LedBrightness.LOW]
+            self.ds5w.outState.playerLeds.brightness = LedBrightness.HIGH
 
+    def setLeftRumble(self, value):
+        self.ds5w.outState.leftRumble = int(value)
 
+    def setRightRumble(self, value):
+        self.ds5w.outState.rightRumble = int(value)
 
+    def makeTriggerEffect(self,triger,effect):
+        # self.ds5w.outState.triggers.triggers[triger].effect = effect
+        pass
+
+    def setTriggerEffect(self,triger,effect):
+        assert triger == LT or triger == RT
+        trigger = None
+        if triger == LT:
+            trigger = self.ds5w.outState.leftTriggerEffect
+        else:
+            trigger = self.ds5w.outState.rightTriggerEffect
+
+        trigger.effectType = effect.effectType
+        trigger.effect = effect.effect
+        triger.Continuous = effect.Continuous
+        triger.Section = effect.Section
+        triger.EffectEx = effect.EffectEx
 
 class pywinds5():
     def __init__(self,
@@ -180,7 +217,7 @@ class pywinds5():
                 last = self.lastState.buttonsB >> i
                 if current & 0x1 != last & 0x1:
                     self.onBTN(BUTTONSB_MAP[i], current == 1)
-        self.onUpdate()#ON UPDATE 可以拿到当前与last两个状态
+        self.onUpdate()  # ON UPDATE 可以拿到当前与last两个状态
         self.lastState = deepcopy(self.currentState)
         return 0
 
